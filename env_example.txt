@@ -1,13 +1,12 @@
 # Настройки Telegram бота
 BOT_TOKEN=1234567890:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsFas
-BOT_URL=https://t.me/your_bot_username
-
-# Настройки YooKassa
-YOOKASSA_SHOP_ID=123456
-YOOKASSA_SECRET_KEY=test_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+PROVIDER_TOKEN=TEST:000000000000000000000000000000000000
 
 # Цена в рублях
-PRICE_RUB=500.0
+PRICE_RUB=500
 
 # Ссылка на поддержку
 SUPPORT_LINK=https://t.me/support
+
+# Администраторы (через запятую)
+ADMIN_IDS=123456789,987654321

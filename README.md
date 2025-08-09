@@ -1,14 +1,15 @@
 # Telegram Bot для продажи файлов после оплаты
 
-Бот для автоматической отправки файлов после успешной оплаты через YooKassa.
+Бот для автоматической отправки файлов после успешной оплаты через Telegram Payments (инвойсы в чате).
 
 ## Возможности
 
-- ✅ Интеграция с YooKassa для приема платежей
+- ✅ Инвойсы Telegram Payments (оплата прямо в боте)
 - ✅ Автоматическая генерация уникальных отчетов
 - ✅ Отправка файлов после подтверждения оплаты
 - ✅ Кэширование отправленных файлов
-- ✅ Проверка статуса платежей
+- ✅ Повторная отправка оплаченных заказов по кнопке
+- ✅ Админ-команды: выдача без оплаты и выдача по ID платежа
 - ✅ Асинхронная работа с базой данных
 
 ## Установка и запуск
@@ -47,17 +48,16 @@ copy env_example.txt .env
 ```env
 # Настройки Telegram бота
 BOT_TOKEN=1234567890:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsFas
-BOT_URL=https://t.me/your_bot_username
-
-# Настройки YooKassa
-YOOKASSA_SHOP_ID=123456
-YOOKASSA_SECRET_KEY=test_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+PROVIDER_TOKEN=TEST:000000000000000000000000000000000000
 
 # Цена в рублях
 PRICE_RUB=500.0
 
 # Ссылка на поддержку
 SUPPORT_LINK=https://t.me/support
+
+# Администраторы (через запятую)
+ADMIN_IDS=123456789,987654321
 ```
 
 6. **Запустите бота:**
@@ -111,17 +111,16 @@ cp env_example.txt .env
 ```env
 # Настройки Telegram бота
 BOT_TOKEN=1234567890:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsFas
-BOT_URL=https://t.me/your_bot_username
-
-# Настройки YooKassa
-YOOKASSA_SHOP_ID=123456
-YOOKASSA_SECRET_KEY=test_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+PROVIDER_TOKEN=TEST:000000000000000000000000000000000000
 
 # Цена в рублях
-PRICE_RUB=500.0
+PRICE_RUB=500
 
 # Ссылка на поддержку
 SUPPORT_LINK=https://t.me/support
+
+# Администраторы (через запятую)
+ADMIN_IDS=123456789,987654321
 ```
 
 6. **Запустите бота:**
@@ -149,16 +148,25 @@ docker-compose up -d
 2. Получите токен бота
 3. Укажите токен в переменной `BOT_TOKEN`
 
-### 2. YooKassa
+### 2. Telegram Payments
 
-1. Зарегистрируйтесь в [YooKassa](https://yookassa.ru/)
-2. Получите Shop ID и Secret Key
-3. Укажите их в переменных `YOOKASSA_SHOP_ID` и `YOOKASSA_SECRET_KEY`
+1. Получите provider token у [@BotFather](https://t.me/BotFather)
+2. Укажите его в `PROVIDER_TOKEN`
 
 ### 3. Цена и поддержка
 
 - Установите цену в переменной `PRICE_RUB`
 - Укажите ссылку на поддержку в `SUPPORT_LINK`
+
+## Команды
+
+- Пользовательские
+  - **/start**: старт, показать кнопки оплаты и проверки заказов
+  - Кнопки: «Оплатить N ₽», «Проверить все заказы»
+
+- Админские (ID администратора указывается в `ADMIN_IDS`)
+  - **/admin_get_project**: отправить проект себе без оплаты
+  - **/admin_get_by_id <проект id>**: отправить проект по `telegram_payment_charge_id`
 
 ## Структура проекта
 
@@ -167,8 +175,9 @@ vyatsu-data-analysis-bot/
 ├── main.py              # Точка входа приложения
 ├── settings.py          # Настройки и конфигурация
 ├── models.py            # Модели базы данных
-├── payments.py          # Логика работы с платежами
+├── payments.py          # Работа с платежами (Telegram Payments)
 ├── user.py              # Обработчики команд пользователя
+├── admin.py             # Обработчики команд администратора
 ├── backend.py           # Генерация уникальных отчетов
 ├── requirements.txt     # Зависимости Python
 ├── pyproject.toml      # Конфигурация проекта
