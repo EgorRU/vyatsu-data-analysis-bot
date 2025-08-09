@@ -1,22 +1,28 @@
+"""
+Точка входа приложения: инициализация БД и запуск бота.
+"""
 from aiogram import Dispatcher, Bot
-from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
 
 from settings import settings
 from models import init_db
+from admin import router_admin
 from user import router_user
 
 
 async def main() -> None:
-    """Основная функция для запуска бота."""
+    """
+    Основная функция для запуска бота.
+    """
     # Создание бд
     await init_db()
     
     # Инициализация бота и диспетчера
     bot = Bot(token=settings.BOT_TOKEN)
-    dispatcher = Dispatcher(storage=MemoryStorage())
+    dispatcher = Dispatcher()
     
     # Подключение роутеров
+    dispatcher.include_router(router_admin)
     dispatcher.include_router(router_user)
     
     # Запуск бота

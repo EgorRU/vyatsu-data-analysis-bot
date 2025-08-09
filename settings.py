@@ -1,20 +1,26 @@
+"""
+Конфигурация приложения на pydantic-settings.
+"""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Класс для хранения и валидации настроек приложения."""
+    """
+    Класс для хранения и валидации настроек приложения.
+    """
     
     # Настройки бота
     BOT_TOKEN: str
-    BOT_URL: str
+    PROVIDER_TOKEN: str
     
-    # Настройки платежной системы
-    YOOKASSA_SHOP_ID: str
-    YOOKASSA_SECRET_KEY: str
+    # Платёжный провайдер Telegram
     PRICE_RUB: float
     
     # Ссылка на поддержку
     SUPPORT_LINK: str
+
+    # Список админов (через запятую): 123,456
+    ADMIN_IDS: str = ""
 
     class Config(SettingsConfigDict):
         env_file = ".env"

@@ -1,3 +1,6 @@
+"""
+Генерация отчетного документа по данным (асинхронный пайплайн).
+"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -64,14 +67,17 @@ def initialize_random_parameters() -> dict:
             - random_state: случайное seed-значение
             - colour_map: случайная цветовая схема для визуализаций
     """
+    test_size = random.randint(10, 35) / 100
+    random_state = random.randint(0, 150)
+    colour_map = random.choice([
+        "viridis", "plasma", "inferno", "magma", "cividis", "spring",
+        "summer", "autumn", "winter", "cool", "Wistia", "hot",
+        "afmhot", "gist_heat", "copper"
+    ])
     return {
-        'test_size': random.randint(10, 35) / 100,
-        'random_state': random.randint(0, 150),
-        'colour_map': random.choice([
-            "viridis", "plasma", "inferno", "magma", "cividis", "spring",
-            "summer", "autumn", "winter", "cool", "Wistia", "hot",
-            "afmhot", "gist_heat", "copper"
-        ])
+        'test_size': test_size,
+        'random_state': random_state,
+        'colour_map': colour_map,
     }
 
 

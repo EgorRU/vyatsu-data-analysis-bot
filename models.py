@@ -1,3 +1,6 @@
+"""
+Модели SQLAlchemy: платежи и инициализация БД.
+"""
 from typing import Optional
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -30,12 +33,11 @@ class Base(AsyncAttrs, DeclarativeBase):
 class PaymentRecord(Base):
     """
     Модель для хранения информации о платежах.
-
+    
     Атрибуты:
         id: Уникальный идентификатор записи
         user_id: ID пользователя (индексируется)
         payment_id: Уникальный идентификатор платежа
-        status: Статус платежа (по умолчанию 'pending')
         file_id: ID привязанного файла (опционально)
     """
     __tablename__ = "payments"
@@ -53,11 +55,6 @@ class PaymentRecord(Base):
         String(128),
         unique=True,
         doc="Уникальный идентификатор платежа"
-    )
-    status: Mapped[str] = mapped_column(
-        String(32),
-        default="pending",
-        doc="Статус платежа"
     )
     file_id: Mapped[Optional[str]] = mapped_column(
         String(256),

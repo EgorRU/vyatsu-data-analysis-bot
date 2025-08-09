@@ -1,20 +1,26 @@
+"""
+Пользовательские хендлеры: старт, оплата инвойсом, проверка заказов.
+"""
 from aiogram import Router, F
-from aiogram.types import Message, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.fsm.context import FSMContext
+from aiogram.types import (
+    Message,
+    FSInputFile,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery,
+    LabeledPrice,
+    PreCheckoutQuery,
+)
 import os
-from settings import settings
 
 from backend import get_filepath_project
 from models import async_session, PaymentRecord
+from settings import settings
 from payments import (
-    generate_payment_link,
     get_price_rub,
-    check_payment_status,
-    get_payment,
-    build_receipt_text,
     set_file_id,
     get_file_id_for_payment,
+    list_successful_payments,
 )
 
 
@@ -23,52 +29,31 @@ router_user = Router()
 SUPPORT_LINK = settings.SUPPORT_LINK
 
 
-class PurchaseState(StatesGroup):
-    """Состояния процесса покупки"""
-    waiting_for_payment = State()
-
-
-async def build_payment_keyboard(user_id: int) -> InlineKeyboardMarkup:
+async def build_payment_keyboard() -> InlineKeyboardMarkup:
     """
     Создает клавиатуру для оплаты
     
-    Args:
-        user_id: ID пользователя
-        
     Returns:
         InlineKeyboardMarkup: Готовая клавиатура
     """
-    payment_url, payment_id = await generate_payment_link(
-        user_id=user_id, 
-        description="Оплата"
-    )
-    
     keyboard_buttons = [
-        [InlineKeyboardButton(text=f"Оплата {get_price_rub()} ₽", url=payment_url)],
+        [InlineKeyboardButton(text=f"Оплатить {get_price_rub()} ₽", callback_data="pay_invoice")],
         [InlineKeyboardButton(text="Проверить все заказы", callback_data="check_all_payments")],
         [InlineKeyboardButton(text="Техподдержка", url=SUPPORT_LINK)],
     ]
-    
-    if payment_id:
-        keyboard_buttons.insert(1, [
-            InlineKeyboardButton(
-                text="Проверить текущий заказ", 
-                callback_data=f"check_current:{payment_id}"
-            )
-        ])
-    
+
     return InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
 
 @router_user.message(F.text == "/start")
-async def handle_start(message: Message):
+async def handle_start(message: Message) -> None:
     """
     Обработчик команды /start
     
     Args:
         message: Объект сообщения
     """
-    keyboard = await build_payment_keyboard(message.from_user.id)
+    keyboard = await build_payment_keyboard()
     
     await message.answer(
         "📚 Курсовой проект по модулю 8: 'Анализ данных'\n"
@@ -83,15 +68,15 @@ async def handle_start(message: Message):
 
 
 async def send_project_file(
-    chat_id: int, 
-    payment_id: str, 
-    receipt_text: str
+    message: Message,
+    payment_id: str,
+    receipt_text: str,
 ) -> bool:
     """
     Отправляет файл проекта пользователю
     
     Args:
-        chat_id: ID чата
+        message: Объект сообщения, в чат которого отправится файл
         payment_id: ID платежа
         receipt_text: Текст чека
         
@@ -100,13 +85,13 @@ async def send_project_file(
     """
     cached_file_id = await get_file_id_for_payment(payment_id)
     if cached_file_id:
-        await chat_id.answer_document(cached_file_id, caption=receipt_text)
+        await message.answer_document(cached_file_id, caption=receipt_text)
         return True
     
     try:
         file_path = await get_filepath_project()
         docx = FSInputFile(file_path, filename='Проект.docx')
-        sent_message = await chat_id.answer_document(docx, caption=receipt_text)
+        sent_message = await message.answer_document(docx, caption=receipt_text)
         
         # Очистка временного файла
         try:
@@ -120,94 +105,80 @@ async def send_project_file(
         return True
         
     except Exception as e:
-        await chat_id.answer(f"❌ Ошибка при отправке файла: {str(e)}")
+        await message.answer(f"❌ Ошибка при отправке файла: {str(e)}")
         return False
 
 
-@router_user.callback_query(F.data.startswith("check_current:"))
-async def handle_current_payment(cb: CallbackQuery, state: FSMContext):
-    """
-    Обработчик проверки текущего платежа
-    
-    Args:
-        cb: CallbackQuery объект
-        state: Состояние FSM
-    """
+@router_user.callback_query(F.data == "pay_invoice")
+async def handle_pay_invoice(cb: CallbackQuery) -> None:
     await cb.answer()
-    
-    # Проверка состояния
-    if await state.get_state() == PurchaseState.waiting_for_payment:
-        await cb.message.answer("Пожалуйста, дождитесь завершения текущей проверки...")
-        return
-
-    await state.set_state(PurchaseState.waiting_for_payment)
-    
-    try:
-        payment_id = cb.data.split(":")[1]
-        status = await check_payment_status(payment_id)
-        
-        if status == "succeeded":
-            payment = get_payment(payment_id)
-            receipt_text = build_receipt_text(payment)
-            await send_project_file(cb.message, payment_id, receipt_text)
-        else:
-            await cb.message.answer(f"Заказ {payment_id} не оплачен.")
-            
-    finally:
-        await state.clear()
+    prices = [LabeledPrice(label="Проект", amount=int(get_price_rub()) * 100)]
+    await cb.message.bot.send_invoice(
+        chat_id=cb.message.chat.id,
+        title="Оплата проекта",
+        description="Покупка проекта по анализу данных",
+        payload=f"user:{cb.from_user.id}",
+        provider_token=settings.PROVIDER_TOKEN,
+        currency="RUB",
+        prices=prices,
+        start_parameter="buy_project",
+    )
 
 
 @router_user.callback_query(F.data == "check_all_payments")
-async def handle_all_payments(cb: CallbackQuery, state: FSMContext):
+async def handle_all_payments(cb: CallbackQuery) -> None:
     """
     Обработчик проверки всех платежей
     
     Args:
         cb: CallbackQuery объект
-        state: Состояние FSM
     """
     await cb.answer()
     
-    # Проверка состояния
-    if await state.get_state() == PurchaseState.waiting_for_payment:
-        await cb.message.answer("Пожалуйста, дождитесь завершения текущей проверки...")
+    # Берем только успешные платежи пользователя
+    payments = await list_successful_payments(cb.from_user.id)
+
+    if not payments:
+        await cb.message.answer("У вас нет завершенных платежей.")
         return
 
-    await state.set_state(PurchaseState.waiting_for_payment)
-    
-    try:
-        # Получаем все платежи пользователя
-        async with async_session() as session:
-            result = await session.execute(
-                PaymentRecord.__table__.select()
-                .where(PaymentRecord.user_id == cb.from_user.id)
-                .order_by(PaymentRecord.id.desc())
+    delivered_count = 0
+
+    for payment in payments:
+        payment_id = payment["payment_id"]
+        receipt_text = f"Оплата через Telegram\nID: {payment_id}"
+        if await send_project_file(cb.message, payment_id, receipt_text):
+            delivered_count += 1
+
+    if delivered_count > 0:
+        await cb.message.answer(f"✅ Успешно отправлено {delivered_count} проектов!")
+    else:
+        await cb.message.answer("Не найдено успешных платежей для доставки.")
+
+
+@router_user.pre_checkout_query()
+async def handle_pre_checkout(pre_checkout_query: PreCheckoutQuery) -> None:
+    await pre_checkout_query.answer(ok=True)
+
+
+@router_user.message(F.successful_payment)
+async def handle_successful_payment(message: Message) -> None:
+    sp = message.successful_payment
+    payment_id = sp.telegram_payment_charge_id
+
+    # Сохраняем успешный платеж
+    async with async_session() as session:
+        session.add(
+            PaymentRecord(
+                user_id=message.from_user.id,
+                payment_id=payment_id,
             )
-            payments = list(result.mappings())
-        
-        if not payments:
-            await cb.message.answer("У вас нет завершенных платежей.")
-            return
-        
-        delivered_count = 0
-        
-        # Обрабатываем каждый платеж
-        for payment in payments:
-            payment_id = payment["payment_id"]
-            status = await check_payment_status(payment_id)
-            
-            if status == "succeeded":
-                payment_obj = get_payment(payment_id)
-                receipt_text = build_receipt_text(payment_obj)
-                
-                if await send_project_file(cb.message, payment_id, receipt_text):
-                    delivered_count += 1
-        
-        # Итоговое сообщение
-        if delivered_count > 0:
-            await cb.message.answer(f"✅ Успешно отправлено {delivered_count} проектов!")
-        else:
-            await cb.message.answer("Не найдено успешных платежей для доставки.")
-            
-    finally:
-        await state.clear()
+        )
+        await session.commit()
+
+    amount_rub = sp.total_amount / 100
+    receipt_text = (
+        f"Сумма: {amount_rub:.2f} ₽\n"
+        f"ID: {payment_id}\n"
+    )
+    await send_project_file(message, payment_id, receipt_text)
