@@ -38,7 +38,7 @@ async def build_payment_keyboard() -> InlineKeyboardMarkup:
     """
     keyboard_buttons = [
         [InlineKeyboardButton(text=f"Оплатить {get_price_rub()} ₽", callback_data="pay_invoice")],
-        [InlineKeyboardButton(text="Проверить все заказы", callback_data="check_all_payments")],
+        [InlineKeyboardButton(text="Получить все заказы", callback_data="get_all_projects")],
         [InlineKeyboardButton(text="Техподдержка", url=SUPPORT_LINK)],
     ]
 
@@ -125,7 +125,7 @@ async def handle_pay_invoice(cb: CallbackQuery) -> None:
     )
 
 
-@router_user.callback_query(F.data == "check_all_payments")
+@router_user.callback_query(F.data == "get_all_projects")
 async def handle_all_payments(cb: CallbackQuery) -> None:
     """
     Обработчик проверки всех платежей
