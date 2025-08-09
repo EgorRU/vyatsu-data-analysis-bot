@@ -12,6 +12,7 @@ from aiogram.types import (
     PreCheckoutQuery,
 )
 import os
+import asyncio
 
 from backend import get_filepath_project
 from models import async_session, PaymentRecord
@@ -126,7 +127,7 @@ async def handle_pay_invoice(cb: CallbackQuery) -> None:
 
 
 @router_user.callback_query(F.data == "get_all_projects")
-async def handle_all_payments(cb: CallbackQuery) -> None:
+async def handle_get_all_projects(cb: CallbackQuery) -> None:
     """
     Обработчик проверки всех платежей
     
@@ -142,18 +143,11 @@ async def handle_all_payments(cb: CallbackQuery) -> None:
         await cb.message.answer("У вас нет завершенных платежей.")
         return
 
-    delivered_count = 0
-
     for payment in payments:
         payment_id = payment["payment_id"]
         receipt_text = f"Оплата через Telegram\nID: {payment_id}"
-        if await send_project_file(cb.message, payment_id, receipt_text):
-            delivered_count += 1
-
-    if delivered_count > 0:
-        await cb.message.answer(f"✅ Успешно отправлено {delivered_count} проектов!")
-    else:
-        await cb.message.answer("Не найдено успешных платежей для доставки.")
+        await send_project_file(cb.message, payment_id, receipt_text)
+        await asyncio.sleep(1)
 
 
 @router_user.pre_checkout_query()
