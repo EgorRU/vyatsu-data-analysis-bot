@@ -10,10 +10,11 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Integer
+from settings import settings
 
 
-# Конфигурация базы данных
-DATABASE_URL = "sqlite+aiosqlite:///database.db"
+# Конфигурация базы данных из настроек
+DATABASE_URL = settings.DATABASE_URL
 
 # Инициализация асинхронного движка SQLAlchemy
 engine = create_async_engine(DATABASE_URL)

@@ -1,16 +1,21 @@
 """
-Админские хендлеры: выдача проекта без оплаты и выдача по ID платежа.
+Админский хендлер: команда /proj с опциональным аргументом ID платежа.
+
+Без аргумента — сгенерировать и отправить новый проект.
+С аргументом — отправить файл по указанному ID платежа (или сгенерировать и привязать, если отсутствует file_id).
 """
 
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 from functools import lru_cache
 from typing import Set
+import os
 
 from settings import settings
 from payments import get_file_id_for_payment
 from user import send_project_file
 from models import async_session, PaymentRecord
+from backend import get_filepath_project
 
 
 router_admin = Router()
@@ -36,37 +41,39 @@ def is_admin(user_id: int) -> bool:
     return user_id in get_admin_ids()
 
 
-@router_admin.message(F.text == "/admin_get_project")
-async def admin_get_project(message: Message) -> None:
+@router_admin.message(F.text.startswith("/proj"))
+async def admin_proj(message: Message) -> None:
     """
-    Отправляет администратору проект без проверки оплаты.
-    Используется для ручной выдачи материалов.
-    """
-    if not is_admin(message.from_user.id):
-        return
-    await send_project_file(message, payment_id="admin-free", receipt_text="Админ-выдача без оплаты")
+    /proj [<payment_id>]
 
-
-@router_admin.message(F.text.startswith("/admin_get_by_id"))
-async def admin_get_by_id(message: Message) -> None:
-    """
-    Отправляет проект по идентификатору платежа.
-    Формат: /admin_get_by_id <проект id>
+    - Без аргумента: сгенерировать новый проект и отправить его администратору
+    - С аргументом: отправить файл по ID платежа (или сгенерировать и привязать)
     """
     if not is_admin(message.from_user.id):
         return
 
     parts = message.text.split(maxsplit=1)
-    if len(parts) < 2:
-        await message.answer("Использование: /admin_get_by_id <проект id>")
+
+    # Случай: без аргумента — просто сгенерировать и отправить
+    if len(parts) == 1:
+        try:
+            file_path = await get_filepath_project()
+            docx = FSInputFile(file_path, filename="Проект.docx")
+            await message.answer_document(docx, caption="Админ-генерация проекта")
+        finally:
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
         return
 
+    # С аргументом — ожидаем payment_id
     payment_id = parts[1].strip()
     if not payment_id:
         await message.answer("ID не валиден.")
         return
 
-    # Проверяем, что такой платеж существует в БД
+    # Проверяем, что запись о платеже существует
     async with async_session() as session:
         result = await session.execute(
             PaymentRecord.__table__.select()
@@ -79,12 +86,12 @@ async def admin_get_by_id(message: Message) -> None:
         await message.answer("ID не найден или не валиден.")
         return
 
-    # Попытка использовать кэшированный file_id
+    # Если file_id уже сохранен — отправляем его
     file_id = await get_file_id_for_payment(payment_id)
     receipt_text = f"Админ-выдача по платежу\nID: {payment_id}"
-
     if file_id:
         await message.answer_document(file_id, caption=receipt_text)
         return
 
+    # Иначе генерируем проект, отправляем и привязываем file_id к платежу
     await send_project_file(message, payment_id=payment_id, receipt_text=receipt_text)

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Список админов (через запятую): 123,456
     ADMIN_IDS: str = ""
 
+    # URL базы данных (например: sqlite+aiosqlite:///database.db)
+    DATABASE_URL: str = "sqlite+aiosqlite:///database.db"
+
     class Config(SettingsConfigDict):
         env_file = ".env"
         env_file_encoding = "utf-8"
