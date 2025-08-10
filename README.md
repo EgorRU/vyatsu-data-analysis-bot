@@ -9,105 +9,50 @@
 - ✅ Отправка файлов после подтверждения оплаты
 - ✅ Кэширование отправленных файлов
 - ✅ Повторная отправка оплаченных заказов по кнопке
-- ✅ Админ-команды: выдача без оплаты и выдача по ID платежа
+- ✅ Админ-команда /proj: выдача без оплаты или по ID платежа
 - ✅ Асинхронная работа с базой данных
 
 ## Установка и запуск
 
-### Windows
-
-#### Требования
-- Python 3.8+ ([скачать](https://www.python.org/downloads/))
-- Git ([скачать](https://git-scm.com/download/win))
-
-#### Установка
+### Установка
 
 1. **Клонируйте репозиторий:**
-```cmd
+```bash
 git clone https://github.com/EgorRU/vyatsu-data-analysis-bot.git
 cd vyatsu-data-analysis-bot
 ```
 
 2. **Создайте виртуальное окружение:**
-```cmd
+```bash
 python -m venv venv
+```
+
+3. **Активируйте виртуальное окружение:**
+- Windows (PowerShell или CMD):
+```cmd
 venv\Scripts\activate
 ```
-
-3. **Установите зависимости:**
-```cmd
-pip install -r requirements.txt
-```
-
-4. **Создайте файл конфигурации:**
-```cmd
-copy env_example.txt .env
-```
-
-5. **Отредактируйте файл `.env` с вашими настройками:**
-```env
-# Настройки Telegram бота
-BOT_TOKEN=1234567890:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsFas
-PROVIDER_TOKEN=TEST:000000000000000000000000000000000000
-
-# Цена в рублях
-PRICE_RUB=500.0
-
-# Ссылка на поддержку
-SUPPORT_LINK=https://t.me/support
-
-# Администраторы (через запятую)
-ADMIN_IDS=123456789,987654321
-```
-
-6. **Запустите бота:**
-```cmd
-python main.py
-```
-
-### Альтернативные способы запуска:
-
-**Через Makefile:**
-```cmd
-make run
-```
-
-**Через Docker:**
-```cmd
-docker-compose up -d
-```
-
-### Linux/macOS
-
-#### Требования
-- Python 3.8+
-- Git
-
-#### Установка
-
-1. **Клонируйте репозиторий:**
+- Linux/macOS (bash/zsh):
 ```bash
-git clone https://github.com/EgorRU/vyatsu-data-analysis-bot.git
-cd vyatsu-data-analysis-bot
-```
-
-2. **Создайте виртуальное окружение:**
-```bash
-python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. **Установите зависимости:**
+4. **Установите зависимости:**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Создайте файл конфигурации:**
+5. **Создайте файл конфигурации `.env`:**
+- Windows:
+```cmd
+copy env_example.txt .env
+```
+- Linux/macOS:
 ```bash
 cp env_example.txt .env
 ```
 
-5. **Отредактируйте файл `.env` с вашими настройками:**
+6. **Отредактируйте файл `.env` с вашими настройками:**
 ```env
 # Настройки Telegram бота
 BOT_TOKEN=1234567890:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsFas
@@ -121,21 +66,24 @@ SUPPORT_LINK=https://t.me/support
 
 # Администраторы (через запятую)
 ADMIN_IDS=123456789,987654321
+
+# URL базы данных
+DATABASE_URL=sqlite+aiosqlite:///database.db
 ```
 
-6. **Запустите бота:**
+### Запуск
 ```bash
-python main.py
+python app/main.py
 ```
 
-### Альтернативные способы запуска:
+### Альтернативные способы запуска
 
-**Через Makefile:**
+Через Makefile:
 ```bash
 make run
 ```
 
-**Через Docker:**
+Через Docker Compose:
 ```bash
 docker-compose up -d
 ```
@@ -165,35 +113,38 @@ docker-compose up -d
   - Кнопки: «Оплатить N ₽», «Проверить все заказы»
 
 - Админские (ID администратора указывается в `ADMIN_IDS`)
-  - **/admin_get_project**: отправить проект себе без оплаты
-  - **/admin_get_by_id <проект id>**: отправить проект по `telegram_payment_charge_id`
+  - **/proj**: сгенерировать новый проект и отправить администратору
+  - **/proj <payment_id>**: отправить файл по `telegram_payment_charge_id`;
+    если файл ещё не был зафиксирован, он будет сгенерирован и привязан к платежу
 
 ## Структура проекта
 
 ```
 vyatsu-data-analysis-bot/
-├── main.py              # Точка входа приложения
-├── settings.py          # Настройки и конфигурация
-├── models.py            # Модели базы данных
-├── payments.py          # Работа с платежами (Telegram Payments)
-├── user.py              # Обработчики команд пользователя
-├── admin.py             # Обработчики команд администратора
-├── backend.py           # Генерация уникальных отчетов
+├── data/                # Данные и шаблон отчета
+│   ├── ds_salaries.csv  # Датасет (входные данные)
+│   └── project.docx     # DOCX-шаблон с плейсхолдерами
+├── app/                 # Приложение бота
+│   ├── backend.py       # Генерация отчета: чтение data, графики (matplotlib/seaborn), ML (sklearn)
+│   ├── main.py          # Точка входа (python app/main.py)
+│   ├── settings.py      # Загрузка переменных из .env (pydantic-settings)
+│   ├── models.py        # SQLAlchemy: движок/сессии и модель PaymentRecord, init_db()
+│   ├── payments.py      # Цена, кэширование file_id, выборка успешных платежей
+│   ├── user.py          # Хендлеры пользователя: /start, инвойс, выдача проектов
+│   └── admin.py         # Хендлеры админа: выдача без оплаты, выдача по ID оплаты
 ├── requirements.txt     # Зависимости Python
-├── pyproject.toml      # Конфигурация проекта
-├── README.md           # Документация
-├── LICENSE             # Лицензия MIT
-├── Makefile            # Команды разработки
-├── Dockerfile          # Контейнеризация
-├── docker-compose.yml  # Docker Compose
-├── .env                # Конфигурация (создать из env_example.txt)
-├── .editorconfig       # Настройки редактора
-├── .gitattributes      # Настройки Git
-├── .gitignore          # Игнорируемые файлы
-├── .dockerignore       # Игнорируемые Docker файлы
-└── data/               # Данные для анализа
-    ├── ds_salaries.csv # CSV файл с данными
-    └── project.docx    # Шаблон отчета
+├── pyproject.toml       # Конфигурация проекта
+├── README.md            # Документация
+├── LICENSE              # Лицензия MIT
+├── Makefile             # Команда запуска (make run)
+├── Dockerfile           # Минимальный Docker-образ
+├── docker-compose.yml   # Минимальный Compose для запуска
+├── .env                 # Конфигурация (создать из env_example.txt)
+├── .editorconfig        # Настройки редактора
+├── .gitattributes       # Настройки Git
+├── .gitignore           # Игнорируемые файлы
+├── .dockerignore        # Игнорируемые Docker файлы
+└── env_example.txt      # Пример .env
 ```
 
 ## Лицензия

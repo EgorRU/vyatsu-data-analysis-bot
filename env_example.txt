@@ -10,3 +10,6 @@ SUPPORT_LINK=https://t.me/support
 
 # Администраторы (через запятую)
 ADMIN_IDS=123456789,987654321
+
+# URL базы данных
+DATABASE_URL=sqlite+aiosqlite:///database.db

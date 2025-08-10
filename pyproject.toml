@@ -12,20 +12,6 @@ authors = [
     {name = "Vyatsu Data Analysis Bot", email = "sergeyrootuser@gmail.com"}
 ]
 keywords = ["telegram", "bot", "payments", "invoice", "data-analysis"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Topic :: Communications :: Chat",
-    "Topic :: Office/Business :: Financial",
-]
 requires-python = ">=3.8"
 dependencies = [
     "aiogram>=3.0.0",
@@ -41,36 +27,12 @@ dependencies = [
     "greenlet>=2.0.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black>=22.0.0",
-]
-
 [project.urls]
 Homepage = "https://github.com/EgorRU/vyatsu-data-analysis-bot"
 Repository = "https://github.com/EgorRU/vyatsu-data-analysis-bot"
 Documentation = "https://github.com/EgorRU/vyatsu-data-analysis-bot#readme"
-"Bug Tracker" = "https://github.com/EgorRU/vyatsu-data-analysis-bot/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["*"]
-exclude = ["tests*", "venv*", "data*"]
-
-[tool.black]
-line-length = 88
-target-version = ['py38']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+include = ["app*"]
+exclude = ["venv*", "data*"]
