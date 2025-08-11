@@ -13,14 +13,15 @@ from aiogram.types import (
 )
 import os
 import asyncio
+import json
 
 from backend import get_filepath_project
-from models import async_session, PaymentRecord
+from models import async_session, Payment
 from settings import settings
 from payments import (
     get_price_rub,
-    set_file_id,
-    get_file_id_for_payment,
+    set_file_id_for_provider,
+    get_file_id_for_provider,
     list_successful_payments,
 )
 
@@ -70,7 +71,7 @@ async def handle_start(message: Message) -> None:
 
 async def send_project_file(
     message: Message,
-    payment_id: str,
+    provider_payment_id: str,
     receipt_text: str,
 ) -> bool:
     """
@@ -84,14 +85,15 @@ async def send_project_file(
     Returns:
         bool: Успешность отправки
     """
-    cached_file_id = await get_file_id_for_payment(payment_id)
+    cached_file_id = await get_file_id_for_provider(provider_payment_id)
     if cached_file_id:
         await message.answer_document(cached_file_id, caption=receipt_text)
         return True
     
     try:
         file_path = await get_filepath_project()
-        docx = FSInputFile(file_path, filename='Проект.docx')
+        safe_payment_id = provider_payment_id or "proj"
+        docx = FSInputFile(file_path, filename=f"{safe_payment_id}.docx")
         sent_message = await message.answer_document(docx, caption=receipt_text)
         
         # Очистка временного файла
@@ -102,7 +104,7 @@ async def send_project_file(
         
         # Сохранение file_id для будущего использования
         file_id = sent_message.document.file_id
-        await set_file_id(payment_id, file_id)
+        await set_file_id_for_provider(provider_payment_id, file_id)
         return True
         
     except Exception as e:
@@ -144,10 +146,10 @@ async def handle_get_all_projects(cb: CallbackQuery) -> None:
         return
 
     for payment in payments:
-        payment_id = payment["payment_id"]
-        receipt_text = f"Оплата через Telegram\nID: {payment_id}"
-        await send_project_file(cb.message, payment_id, receipt_text)
-        await asyncio.sleep(1)
+        provider_payment_id = payment["provider_payment_id"]
+        receipt_text = f"ID платежа: {provider_payment_id}"
+        await send_project_file(cb.message, provider_payment_id, receipt_text)
+        await asyncio.sleep(0.5)
 
 
 @router_user.pre_checkout_query()
@@ -158,14 +160,15 @@ async def handle_pre_checkout(pre_checkout_query: PreCheckoutQuery) -> None:
 @router_user.message(F.successful_payment)
 async def handle_successful_payment(message: Message) -> None:
     sp = message.successful_payment
-    payment_id = sp.telegram_payment_charge_id
+    provider_payment_id = sp.provider_payment_charge_id
 
     # Сохраняем успешный платеж
     async with async_session() as session:
         session.add(
-            PaymentRecord(
+            Payment(
                 user_id=message.from_user.id,
-                payment_id=payment_id,
+                username=message.from_user.username,
+                provider_payment_id=provider_payment_id,
             )
         )
         await session.commit()
@@ -173,6 +176,6 @@ async def handle_successful_payment(message: Message) -> None:
     amount_rub = sp.total_amount / 100
     receipt_text = (
         f"Сумма: {amount_rub:.2f} ₽\n"
-        f"ID: {payment_id}\n"
+        f"ID банка: {provider_payment_id}\n"
     )
-    await send_project_file(message, payment_id, receipt_text)
+    await send_project_file(message, provider_payment_id, receipt_text)
