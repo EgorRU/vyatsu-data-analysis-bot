@@ -3,7 +3,7 @@
 """
 from typing import Optional, List
 from settings import settings
-from models import async_session, PaymentRecord
+from models import async_session, Payment
 
 
 def get_price_rub() -> int:
@@ -13,27 +13,27 @@ def get_price_rub() -> int:
     return int(settings.PRICE_RUB)
 
 
-async def set_file_id(payment_id: str, file_id: str) -> None:
+async def set_file_id_for_provider(provider_payment_id: str, file_id: str) -> None:
     """
     Привязывает file_id к платежу
     """
     async with async_session() as session:
         await session.execute(
-            PaymentRecord.__table__.update()
-            .where(PaymentRecord.payment_id == payment_id)
+            Payment.__table__.update()
+            .where(Payment.provider_payment_id == provider_payment_id)
             .values(file_id=file_id)
         )
         await session.commit()
 
 
-async def get_file_id_for_payment(payment_id: str) -> Optional[str]:
+async def get_file_id_for_provider(provider_payment_id: str) -> Optional[str]:
     """
     Возвращает file_id для платежа
     """
     async with async_session() as session:
         result = await session.execute(
-            PaymentRecord.__table__.select()
-            .where(PaymentRecord.payment_id == payment_id)
+            Payment.__table__.select()
+            .where(Payment.provider_payment_id == provider_payment_id)
             .limit(1)
         )
         row = result.mappings().first()
@@ -46,9 +46,9 @@ async def list_successful_payments(user_id: int) -> List[dict]:
     """
     async with async_session() as session:
         result = await session.execute(
-            PaymentRecord.__table__.select()
-            .where(PaymentRecord.user_id == user_id)
-            .order_by(PaymentRecord.id.desc())
+            Payment.__table__.select()
+            .where(Payment.user_id == user_id)
+            .order_by(Payment.id.desc())
         )
         rows = list(result.mappings())
         return rows
