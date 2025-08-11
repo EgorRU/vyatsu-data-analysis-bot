@@ -12,9 +12,9 @@ from typing import Set
 import os
 
 from settings import settings
-from payments import get_file_id_for_payment
+from payments import get_file_id_for_provider
 from user import send_project_file
-from models import async_session, PaymentRecord
+from models import async_session, Payment
 from backend import get_filepath_project
 
 
@@ -58,7 +58,7 @@ async def admin_proj(message: Message) -> None:
     if len(parts) == 1:
         try:
             file_path = await get_filepath_project()
-            docx = FSInputFile(file_path, filename="Проект.docx")
+            docx = FSInputFile(file_path)
             await message.answer_document(docx, caption="Админ-генерация проекта")
         finally:
             try:
@@ -67,17 +67,17 @@ async def admin_proj(message: Message) -> None:
                 pass
         return
 
-    # С аргументом — ожидаем payment_id
-    payment_id = parts[1].strip()
-    if not payment_id:
+    # С аргументом — ожидаем provider_payment_id
+    provider_payment_id = parts[1].strip()
+    if not provider_payment_id:
         await message.answer("ID не валиден.")
         return
 
     # Проверяем, что запись о платеже существует
     async with async_session() as session:
         result = await session.execute(
-            PaymentRecord.__table__.select()
-            .where(PaymentRecord.payment_id == payment_id)
+            Payment.__table__.select()
+            .where(Payment.provider_payment_id == provider_payment_id)
             .limit(1)
         )
         row = result.mappings().first()
@@ -87,11 +87,11 @@ async def admin_proj(message: Message) -> None:
         return
 
     # Если file_id уже сохранен — отправляем его
-    file_id = await get_file_id_for_payment(payment_id)
-    receipt_text = f"Админ-выдача по платежу\nID: {payment_id}"
+    file_id = await get_file_id_for_provider(provider_payment_id)
+    receipt_text = f"Админ-выдача по платежу\nID: {provider_payment_id}"
     if file_id:
         await message.answer_document(file_id, caption=receipt_text)
         return
 
     # Иначе генерируем проект, отправляем и привязываем file_id к платежу
-    await send_project_file(message, payment_id=payment_id, receipt_text=receipt_text)
+    await send_project_file(message, provider_payment_id=provider_payment_id, receipt_text=receipt_text)
