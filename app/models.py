@@ -31,14 +31,15 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
-class PaymentRecord(Base):
+class Payment(Base):
     """
     Модель для хранения информации о платежах.
     
     Атрибуты:
         id: Уникальный идентификатор записи
         user_id: ID пользователя (индексируется)
-        payment_id: Уникальный идентификатор платежа
+        username: Username пользователя в Telegram (опционально)
+        provider_payment_id: Идентификатор платежа у банка/провайдера
         file_id: ID привязанного файла (опционально)
     """
     __tablename__ = "payments"
@@ -52,10 +53,16 @@ class PaymentRecord(Base):
         index=True,
         doc="ID пользователя"
     )
-    payment_id: Mapped[str] = mapped_column(
+    username: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        doc="Username пользователя"
+    )
+    provider_payment_id: Mapped[Optional[str]] = mapped_column(
         String(128),
+        nullable=True,
         unique=True,
-        doc="Уникальный идентификатор платежа"
+        doc="ID платежа у провайдера/банка"
     )
     file_id: Mapped[Optional[str]] = mapped_column(
         String(256),
