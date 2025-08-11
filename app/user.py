@@ -116,6 +116,24 @@ async def send_project_file(
 async def handle_pay_invoice(cb: CallbackQuery) -> None:
     await cb.answer()
     prices = [LabeledPrice(label="Проект", amount=int(get_price_rub()) * 100)]
+    provider_data = {
+        "receipt": {
+            "items": [
+                {
+                    "description": "Проект по анализу данных",
+                    "quantity": "1.00",
+                    "amount": {
+                        "value": f"{float(get_price_rub()):.2f}",
+                        "currency": "RUB",
+                    },
+                    "vat_code": 1,
+                    "payment_mode": "full_payment",
+                    "payment_subject": "service",
+                }
+            ],
+            "tax_system_code": 1,
+        }
+    }
     await cb.message.bot.send_invoice(
         chat_id=cb.message.chat.id,
         title="Оплата проекта",
@@ -125,6 +143,9 @@ async def handle_pay_invoice(cb: CallbackQuery) -> None:
         currency="RUB",
         prices=prices,
         start_parameter="buy_project",
+        need_email=True,
+        send_email_to_provider=True,
+        provider_data=json.dumps(provider_data),
     )
 
 
