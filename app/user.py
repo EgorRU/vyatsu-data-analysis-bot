@@ -47,7 +47,7 @@ async def build_payment_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
 
-@router_user.message(F.text == "/start")
+@router_user.message(F.text.startswith("/start"))
 async def handle_start(message: Message) -> None:
     """
     Обработчик команды /start
