@@ -73,7 +73,7 @@ DATABASE_URL=sqlite+aiosqlite:///database.db
 
 ### Запуск
 ```bash
-python app/main.py
+python src/main.py
 ```
 
 ### Альтернативные способы запуска
@@ -124,9 +124,9 @@ vyatsu-data-analysis-bot/
 ├── data/                # Данные и шаблон отчета
 │   ├── ds_salaries.csv  # Датасет (входные данные)
 │   └── project.docx     # DOCX-шаблон с плейсхолдерами
-├── app/                 # Приложение бота
+├── src/                 # Приложение бота
 │   ├── backend.py       # Генерация отчета: чтение data, графики (matplotlib/seaborn), ML (sklearn)
-│   ├── main.py          # Точка входа (python app/main.py)
+│   ├── main.py          # Точка входа (python src/main.py)
 │   ├── settings.py      # Загрузка переменных из .env (pydantic-settings)
 │   ├── models.py        # SQLAlchemy: движок/сессии и модель PaymentRecord, init_db()
 │   ├── payments.py      # Цена, кэширование file_id, выборка успешных платежей

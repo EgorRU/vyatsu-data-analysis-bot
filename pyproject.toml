@@ -34,5 +34,5 @@ Documentation = "https://github.com/EgorRU/vyatsu-data-analysis-bot#readme"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*"]
+include = ["src*"]
 exclude = ["venv*", "data*"]
